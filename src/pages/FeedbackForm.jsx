@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { classifyFeedback } from '../lib/openai'
+import { fetchActiveMenu } from '../lib/menu'
 
 const TAGS = ['Taste', 'Hygiene', 'Quantity', 'Quality']
 
@@ -10,7 +11,8 @@ function getMealSlot() {
   if (hour >= 7 && hour < 11) return 'Breakfast'
   if (hour >= 12 && hour < 16) return 'Lunch'
   if (hour >= 17 && hour < 19) return 'Snacks'
-  if (hour >= 19 && hour < 23) return 'Dinner'
+  // Testing: Dinner covers all night (7 PM to 6:59 AM)
+  if (hour >= 19 || hour < 7) return 'Dinner'
   return 'Closed'
 }
 
@@ -24,6 +26,19 @@ export default function FeedbackForm() {
   const [text, setText] = useState('')
   const [status, setStatus] = useState(null) // 'success' | 'error' | null
   const [submitting, setSubmitting] = useState(false)
+  const [menu, setMenu] = useState(null)
+
+  useEffect(() => {
+    async function getMenu() {
+      if (!messId) return
+      const fetchedMenu = await fetchActiveMenu(messId)
+      setMenu(fetchedMenu || {})
+    }
+    getMenu()
+  }, [messId])
+
+  const day = new Date().toLocaleString('en-us', { weekday: 'long' })
+  const items = menu?.[day]?.[mealSlot] || []
 
   const toggleTag = (tag) => {
     setSelectedTags((prev) =>
@@ -110,6 +125,28 @@ export default function FeedbackForm() {
               <p className="text-white font-semibold">{mealSlot}</p>
             </div>
           </div>
+
+          {/* Show Dishes */}
+          {menu && (Array.isArray(items) ? items.length > 0 : items) && (
+            <div className="mb-6 p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+              <p className="text-xs text-purple-300 font-medium mb-2 uppercase tracking-wide">
+                Today's Menu ({day})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {Array.isArray(items) ? (
+                  items.map((dish, idx) => (
+                    <span key={idx} className="text-sm px-3 py-1 rounded-full bg-white/10 text-white">
+                      {dish}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm px-3 py-1 rounded-full bg-white/10 text-white">
+                    {items}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {status === 'success' && (
             <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">

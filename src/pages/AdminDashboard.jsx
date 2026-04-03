@@ -86,10 +86,10 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Link
-            to={`/?mess=${messId}`}
+            to={`/upload-menu?mess=${messId}`}
             className="text-sm px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition"
           >
-            ← Form View
+            Menu Updater →
           </Link>
         </div>
 
@@ -121,11 +121,10 @@ export default function AdminDashboard() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition cursor-pointer ${
-                filter === f
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition cursor-pointer ${filter === f
                   ? 'bg-purple-600 text-white'
                   : 'bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-              }`}
+                }`}
             >
               {f}
             </button>
@@ -162,7 +161,7 @@ export default function AdminDashboard() {
                     <tr key={item.id} className="hover:bg-white/[0.02] transition">
                       <td className="p-4 align-top">
                         <div className="text-white text-sm whitespace-nowrap">
-                          {item.created_at ? new Date(item.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short'}) : '—'}
+                          {item.created_at ? new Date(item.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                         </div>
                         <div className="text-purple-400 text-xs mt-1 font-medium bg-purple-500/10 inline-block px-2 py-0.5 rounded-full">
                           {item.meal_slot}

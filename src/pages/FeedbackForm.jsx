@@ -54,6 +54,11 @@ export default function FeedbackForm() {
       return
     }
 
+    if (rating <= 3 && !text.trim()) {
+      setStatus('error_text_required')
+      return
+    }
+
     setSubmitting(true)
     setStatus(null)
 
@@ -96,9 +101,9 @@ export default function FeedbackForm() {
   // Closed state
   if (mealSlot === 'Closed') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
-        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-8 max-w-md text-center">
-          <p className="text-slate-300 text-lg">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-100 to-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 max-w-md text-center">
+          <p className="text-slate-700 text-lg">
             Feedback only allowed during meal times
           </p>
         </div>
@@ -107,40 +112,40 @@ export default function FeedbackForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-100 to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
-        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-8">
-          <h1 className="text-3xl font-bold text-white mb-6 tracking-tight">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-6 tracking-tight">
             Submit Feedback
           </h1>
 
           {/* Mess ID & Meal Slot */}
           <div className="flex gap-4 mb-6">
-            <div className="flex-1 p-3 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex-1 p-3 rounded-xl bg-slate-50 border border-slate-200">
               <p className="text-xs text-slate-500 mb-1">Mess ID</p>
-              <p className="text-white font-semibold">{messId || '—'}</p>
+              <p className="text-slate-900 font-semibold">{messId || '—'}</p>
             </div>
-            <div className="flex-1 p-3 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex-1 p-3 rounded-xl bg-slate-50 border border-slate-200">
               <p className="text-xs text-slate-500 mb-1">Meal Slot</p>
-              <p className="text-white font-semibold">{mealSlot}</p>
+              <p className="text-slate-900 font-semibold">{mealSlot}</p>
             </div>
           </div>
 
           {/* Show Dishes */}
           {menu && (Array.isArray(items) ? items.length > 0 : items) && (
-            <div className="mb-6 p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
-              <p className="text-xs text-purple-300 font-medium mb-2 uppercase tracking-wide">
+            <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100">
+              <p className="text-xs text-purple-700 font-medium mb-2 uppercase tracking-wide">
                 Today's Menu ({day})
               </p>
               <div className="flex flex-wrap gap-2">
                 {Array.isArray(items) ? (
                   items.map((dish, idx) => (
-                    <span key={idx} className="text-sm px-3 py-1 rounded-full bg-white/10 text-white">
+                    <span key={idx} className="text-sm px-3 py-1 rounded-full bg-purple-100 text-purple-900">
                       {dish}
                     </span>
                   ))
                 ) : (
-                  <span className="text-sm px-3 py-1 rounded-full bg-white/10 text-white">
+                  <span className="text-sm px-3 py-1 rounded-full bg-purple-100 text-purple-900">
                     {items}
                   </span>
                 )}
@@ -155,17 +160,23 @@ export default function FeedbackForm() {
           )}
 
           {status === 'error' && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
               {rating === 0
                 ? 'Please select a rating before submitting.'
                 : 'Something went wrong. Please try again.'}
             </div>
           )}
 
+          {status === 'error_text_required' && (
+            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
+              Please provide a comment explaining why you gave {rating} stars.
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Star Rating */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Rating
               </label>
               <div className="flex gap-2">
@@ -177,7 +188,7 @@ export default function FeedbackForm() {
                     className={`text-3xl transition-colors cursor-pointer ${
                       star <= rating
                         ? 'text-yellow-400'
-                        : 'text-slate-600 hover:text-slate-400'
+                        : 'text-slate-300 hover:text-slate-400'
                     }`}
                   >
                     ★
@@ -188,7 +199,7 @@ export default function FeedbackForm() {
 
             {/* Complaint Tags */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Complaint Tags
               </label>
               <div className="flex flex-wrap gap-2">
@@ -200,7 +211,7 @@ export default function FeedbackForm() {
                     className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
                       selectedTags.includes(tag)
                         ? 'bg-purple-600 border-purple-500 text-white'
-                        : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
                     }`}
                   >
                     {tag}
@@ -211,15 +222,15 @@ export default function FeedbackForm() {
 
             {/* Optional Text */}
             <div>
-              <label htmlFor="complaint-text" className="block text-sm font-medium text-slate-300 mb-1.5">
-                Additional Comments <span className="text-slate-500">(optional)</span>
+              <label htmlFor="complaint-text" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Additional Comments {rating > 0 && rating <= 3 ? <span className="text-red-500">*</span> : <span className="text-slate-500">(optional)</span>}
               </label>
               <textarea
                 id="complaint-text"
                 rows={3}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition resize-none"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition resize-none"
                 placeholder="Describe your experience..."
               />
             </div>

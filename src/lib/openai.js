@@ -32,7 +32,8 @@ Do not add any Markdown formatting, explanations, or extra text. Output raw JSON
 
   if (azureEndpoint && azureDeployment && azureApiKey) {
     try {
-      const azureUrl = `${azureEndpoint}/openai/deployments/${azureDeployment}/chat/completions?api-version=2024-02-01`
+      const baseEndpoint = azureEndpoint.endsWith('/') ? azureEndpoint.slice(0, -1) : azureEndpoint
+      const azureUrl = `${baseEndpoint}/openai/deployments/${azureDeployment}/chat/completions?api-version=2025-04-01-preview`
       const azureResponse = await fetch(azureUrl, {
         method: 'POST',
         headers: {
@@ -41,7 +42,6 @@ Do not add any Markdown formatting, explanations, or extra text. Output raw JSON
         },
         body: JSON.stringify({
           messages,
-          temperature: 0,
           response_format: { type: 'json_object' }
         })
       })
@@ -93,3 +93,105 @@ Do not add any Markdown formatting, explanations, or extra text. Output raw JSON
     return { summary: 'Classification failed', severity: 1 }
   }
 }
+
+/**
+ * Transforms a messy Excel JSON dump into a strict perfectly structured menu JSON.
+ * @param {any} rawExcelData 
+ * @returns {Promise<Object>}
+ */
+export async function formatMenuViaAI(rawExcelData) {
+  const messages = [
+    {
+      role: 'system',
+      content: `You are a strict data formatter. I am going to give you raw, messy 2D array data extracted from an Excel weekly food menu.
+Your ONLY job is to figure out the meal plan and map it precisely into the following JSON format:
+{
+  "Monday": { "Breakfast": ["Item 1"], "Lunch": ["Item 2"], "Snacks": ["Item 3"], "Dinner": ["Item 4"] },
+  "Tuesday": { ... }
+}
+Rules:
+1. ONLY return the raw JSON object. Do not use Markdown code blocks (\`\`\`).
+2. ONLY use the exact day keys: "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday".
+3. ONLY use the exact meal keys: "Breakfast", "Lunch", "Snacks", "Dinner".
+4. The items must be an array of strings. If the excel has "Tea, Poha, Milk", split them into ["Tea", "Poha", "Milk"].
+5. If a day or a meal slot is entirely missing or empty, just return an empty array [] for it.`
+    },
+    {
+      role: 'user',
+      content: JSON.stringify(rawExcelData)
+    }
+  ]
+
+  let azureErrorReason = 'Azure config missing'
+  // 1. Try Azure OpenAI FIRST
+  const azureEndpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT
+  const azureDeployment = import.meta.env.VITE_AZURE_DEPLOYMENT_NAME
+  const azureApiKey = import.meta.env.VITE_AZURE_OPENAI_KEY
+
+  if (azureEndpoint && azureDeployment && azureApiKey) {
+    azureErrorReason = ''
+    try {
+      const baseEndpoint = azureEndpoint.endsWith('/') ? azureEndpoint.slice(0, -1) : azureEndpoint
+      const azureUrl = `${baseEndpoint}/openai/deployments/${azureDeployment}/chat/completions?api-version=2025-04-01-preview`
+      const azureResponse = await fetch(azureUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': azureApiKey
+        },
+        body: JSON.stringify({
+          messages,
+          response_format: { type: 'json_object' }
+        })
+      })
+
+      if (azureResponse.ok) {
+        const data = await azureResponse.json()
+        const content = data.choices[0].message.content
+        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim()
+        return JSON.parse(cleanContent)
+      } else {
+        azureErrorReason = `Azure returned ${azureResponse.status} ${azureResponse.statusText}`
+        console.warn(`Azure OpenAI failed: ${azureResponse.status}`)
+      }
+    } catch (azureError) {
+      azureErrorReason = azureError.message
+      console.warn('Azure OpenAI error:', azureError.message, 'Falling back to standard OpenAI...')
+    }
+  }
+
+  // 2. Fallback to standard OpenAI
+  const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY
+  if (!openaiApiKey) {
+     throw new Error(`Azure failed with: ${azureErrorReason || 'Invalid config'}, and no standard OpenAI fallback key is available.`)
+  }
+
+  try {
+    const openaiUrl = 'https://api.openai.com/v1/chat/completions'
+    const openaiResponse = await fetch(openaiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        messages,
+        temperature: 0
+      })
+    })
+
+    if (!openaiResponse.ok) {
+        throw new Error(`OpenAI API error: ${openaiResponse.status}`)
+    }
+    const data = await openaiResponse.json()
+    const content = data.choices[0].message.content
+    const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim()
+    return JSON.parse(cleanContent)
+  } catch (error) {
+    console.error('formatMenuViaAI failed:', error)
+    throw error
+  }
+}
+

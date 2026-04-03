@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link, useSearchParams } from 'react-router-dom'
+import * as XLSX from 'xlsx'
+import { formatMenuViaAI } from '../lib/openai'
 
 export default function UploadMenu() {
   const [searchParams] = useSearchParams()
@@ -16,6 +18,32 @@ export default function UploadMenu() {
   const [editJson, setEditJson] = useState({ 1: '', 2: '' })
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState(null)
+
+  const handleExcelUpload = async (e, weekNum) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLoading(true)
+    setStatusMsg({ type: 'success', msg: 'Reading Excel file and consulting AI...' })
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+      const firstSheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[firstSheetName]
+      const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+      
+      const aiFormattedData = await formatMenuViaAI(rawJson)
+      
+      setEditJson(prev => ({ ...prev, [weekNum]: JSON.stringify(aiFormattedData, null, 2) }))
+      setEditing(prev => ({ ...prev, [weekNum]: true }))
+      setStatusMsg({ type: 'success', msg: 'Excel processed by AI! Review the JSON and save.' })
+    } catch (err) {
+      console.error(err)
+      setStatusMsg({ type: 'error', msg: 'Failed to extract or format Excel data.' })
+    } finally {
+      setLoading(false)
+      e.target.value = null
+    }
+  }
 
   const fetchMenus = async () => {
     if (!messId) {
@@ -147,13 +175,29 @@ export default function UploadMenu() {
                     </p>
                  </div>
                  {!isEditing && (
-                    <button 
-                       disabled={!messId || loading}
-                       onClick={() => handleEditClick(weekNum)}
-                       className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition cursor-pointer disabled:opacity-50"
-                    >
-                       Edit Menu
-                    </button>
+                    <div className="flex items-center gap-2">
+                       <button 
+                          disabled={!messId || loading}
+                          onClick={() => document.getElementById(`excel-upload-${weekNum}`).click()}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 font-medium transition cursor-pointer disabled:opacity-50"
+                       >
+                          Upload Excel
+                       </button>
+                       <input 
+                          type="file" 
+                          id={`excel-upload-${weekNum}`} 
+                          style={{ display: 'none' }} 
+                          accept=".xlsx,.xls" 
+                          onChange={(e) => handleExcelUpload(e, weekNum)} 
+                       />
+                       <button 
+                          disabled={!messId || loading}
+                          onClick={() => handleEditClick(weekNum)}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition cursor-pointer disabled:opacity-50"
+                       >
+                          Edit Menu
+                       </button>
+                    </div>
                  )}
               </div>
 

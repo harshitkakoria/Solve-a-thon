@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { classifyFeedback } from '../lib/openai'
 
 const TAGS = ['Taste', 'Hygiene', 'Quantity', 'Quality']
 
@@ -41,12 +42,27 @@ export default function FeedbackForm() {
     setSubmitting(true)
     setStatus(null)
 
+    let ai_summary = ''
+    let ai_severity = 1
+
+    try {
+      const classification = await classifyFeedback(selectedTags, text)
+      if (classification) {
+        ai_summary = classification.summary || ''
+        ai_severity = classification.severity || 1
+      }
+    } catch (err) {
+      console.error('Classification error:', err)
+    }
+
     const { error } = await supabase.from('feedback').insert({
       mess_id: messId,
       meal_slot: mealSlot,
       rating,
       complaint_tags: selectedTags,
       complaint_text: text || null,
+      ai_summary,
+      ai_severity,
     })
 
     setSubmitting(false)

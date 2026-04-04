@@ -14,7 +14,7 @@ function getMealSlot() {
 
   if (t >= 7 && t <= 9.5) return 'Breakfast' // 7:00 AM - 9:30 AM
   if (t >= 12 && t <= 14.5) return 'Lunch'   // 12:00 PM - 2:30 PM
-  if (t >= 17 && t <= 18.5) return 'Snacks'  // 5:00 PM - 6:30 PM
+  if (t >= 15 && t <= 18.5) return 'Snacks'  // 3:00 PM - 6:30 PM
   if (t >= 19 && t <= 21) return 'Dinner'    // 7:00 PM - 9:00 PM
   return 'Closed'
 }

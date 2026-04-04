@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion'
 import { useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -10,11 +11,13 @@ const FILTERS = ['All', 'Breakfast', 'Lunch', 'Snacks', 'Dinner']
 const DATE_RANGES = ['Today', 'Last 7 Days', 'This Month', 'All Time']
 
 function getMealSlot() {
-  const hour = new Date().getHours()
-  if (hour >= 7 && hour < 11) return 'Breakfast'
-  if (hour >= 12 && hour < 16) return 'Lunch'
-  if (hour >= 17 && hour < 19) return 'Snacks'
-  if (hour >= 19 || hour < 7) return 'Dinner'
+  const now = new Date()
+  const t = now.getHours() + now.getMinutes() / 60
+
+  if (t >= 7 && t <= 9.5) return 'Breakfast' // 7:00 AM - 9:30 AM
+  if (t >= 12 && t <= 14.5) return 'Lunch'   // 12:00 PM - 2:30 PM
+  if (t >= 17 && t <= 18.5) return 'Snacks'  // 5:00 PM - 6:30 PM
+  if (t >= 19 && t <= 21) return 'Dinner'    // 7:00 PM - 9:00 PM
   return 'Closed'
 }
 
@@ -26,7 +29,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All')
   const [dateRange, setDateRange] = useState('All Time')
-  
+
   // aiSummaries now stores full objects: { summary, suggestions, todos }
   const [aiSummaries, setAiSummaries] = useState({})
   const [aiLoading, setAiLoading] = useState({})
@@ -104,15 +107,15 @@ export default function AdminDashboard() {
   // ─── Generate & save a meal session summary ───
   const handleGenerateSummary = async (groupId, mealFeedbacks) => {
     setAiLoading(prev => ({ ...prev, [groupId]: true }))
-    
+
     const payload = mealFeedbacks.map(f => ({
       id: f.id,
       tags: f.complaint_tags || [],
       text: f.complaint_text || ''
     }))
-    
+
     const result = await summarizeMealSession(payload)
-    
+
     setAiSummaries(prev => ({ ...prev, [groupId]: result }))
     setAiLoading(prev => ({ ...prev, [groupId]: false }))
 
@@ -121,13 +124,14 @@ export default function AdminDashboard() {
     await saveSummaryToDB(dbId, result)
   }
 
+  // eslint-disable-next-line no-unused-vars
   const toggleResolved = async (id, currentStatus) => {
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, is_resolved: !currentStatus } : f))
     const { error } = await supabase
       .from('feedback')
       .update({ is_resolved: !currentStatus })
       .eq('id', id)
-      
+
     if (error) console.error('Error toggling resolve status:', error)
   }
 
@@ -135,7 +139,7 @@ export default function AdminDashboard() {
     if (!linkedIds || linkedIds.length === 0) return
     const newStatus = !isCurrentlyResolved
 
-    setFeedbacks(prev => prev.map(f => 
+    setFeedbacks(prev => prev.map(f =>
       linkedIds.includes(f.id) ? { ...f, is_resolved: newStatus } : f
     ))
 
@@ -143,7 +147,7 @@ export default function AdminDashboard() {
       .from('feedback')
       .update({ is_resolved: newStatus })
       .in('id', linkedIds)
-      
+
     if (error) console.error('Error bulk toggling status:', error)
   }
 
@@ -151,16 +155,16 @@ export default function AdminDashboard() {
   const timeFilteredFeedbacks = useMemo(() => {
     const now = new Date()
     const activeSlot = getMealSlot()
-    
+
     return feedbacks.filter(f => {
       if (!f.created_at) return true
       const fDate = new Date(f.created_at)
       const isToday = fDate.toDateString() === now.toDateString()
-      
+
       if (isToday && f.meal_slot === activeSlot) {
         return false
       }
-      
+
       if (dateRange === 'Today') {
         return isToday
       } else if (dateRange === 'Last 7 Days') {
@@ -204,12 +208,12 @@ export default function AdminDashboard() {
       groups[key].sum += (f.rating || 0)
       if (f.ai_severity === 3) groups[key].critical++
       if (f.ai_severity === 3 && !f.is_resolved) groups[key].unresolved++
-      
-      ;(f.complaint_tags || []).forEach(t => {
-         groups[key].tags[t] = (groups[key].tags[t] || 0) + 1
-      })
+
+        ; (f.complaint_tags || []).forEach(t => {
+          groups[key].tags[t] = (groups[key].tags[t] || 0) + 1
+        })
     })
-    
+
     return Object.values(groups).map(g => ({
       ...g,
       avg: (g.sum / g.feedbacks.length).toFixed(1),
@@ -263,9 +267,9 @@ export default function AdminDashboard() {
   // Chart Data
   const chartData = useMemo(() => {
     const dailyAvg = {}
-    
+
     const reversed = [...timeFilteredFeedbacks].reverse()
-    
+
     reversed.forEach(f => {
       if (!f.created_at || typeof f.rating !== 'number') return
       const dateStr = new Date(f.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
@@ -286,7 +290,7 @@ export default function AdminDashboard() {
   const stats = useMemo(() => {
     const total = timeFilteredFeedbacks.length
     if (total === 0) return { average: 0, total: 0, critical: 0, unresolved: 0 }
-    
+
     const sum = timeFilteredFeedbacks.reduce((acc, curr) => acc + (curr.rating || 0), 0)
     const average = (sum / total).toFixed(1)
     const critical = timeFilteredFeedbacks.filter((f) => f.ai_severity === 3).length
@@ -299,7 +303,7 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen relative overflow-hidden bg-slate-50 flex items-center justify-center p-4">
         <div className="absolute top-[-20%] left-[-10%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-purple-50/40 to-slate-50 animate-slow-pulse pointer-events-none" />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="glass-panel p-8 max-w-md text-center rounded-3xl relative z-10"
@@ -321,9 +325,9 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-50 p-4 md:p-10">
       <div className="absolute top-[-20%] left-[-10%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-purple-50/40 to-slate-50 animate-slow-pulse pointer-events-none" />
-      
+
       <div className="relative z-10 max-w-7xl mx-auto space-y-8">
-        
+
         {/* Header Options */}
         <div className="flex flex-col md:flex-row items-baseline md:items-center justify-between gap-4">
           <div>
@@ -334,7 +338,7 @@ export default function AdminDashboard() {
               Analyzing insights for Mess: <span className="font-semibold text-purple-600">{messId}</span>
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Date Range Selector */}
             <div className="relative">
@@ -365,16 +369,16 @@ export default function AdminDashboard() {
 
         {/* Action Highlights */}
         {stats.unresolved > 0 && (
-          <motion.div 
-             initial={{ opacity: 0, y: -10 }}
-             animate={{ opacity: 1, y: 0 }}
-             className="p-4 rounded-2xl bg-red-50 border border-red-100 flex gap-4 items-center shadow-sm"
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-2xl bg-red-50 border border-red-100 flex gap-4 items-center shadow-sm"
           >
-             <AlertTriangle className="text-red-500 w-6 h-6 flex-shrink-0" />
-             <div>
-               <h3 className="text-red-800 font-bold mb-0 text-sm">Attention Required</h3>
-               <p className="text-red-600/90 text-sm m-0">You have {stats.unresolved} unresolved critical hygiene/health complaints in this timeframe.</p>
-             </div>
+            <AlertTriangle className="text-red-500 w-6 h-6 flex-shrink-0" />
+            <div>
+              <h3 className="text-red-800 font-bold mb-0 text-sm">Attention Required</h3>
+              <p className="text-red-600/90 text-sm m-0">You have {stats.unresolved} unresolved critical hygiene/health complaints in this timeframe.</p>
+            </div>
           </motion.div>
         )}
 
@@ -385,30 +389,30 @@ export default function AdminDashboard() {
               Average Rating Trend
               <span className="text-xs text-slate-400 font-medium capitalize normal-case">({dateRange})</span>
             </h3>
-            
+
             <div className="flex-1 w-full min-h-0">
-               {chartData.length > 0 ? (
-                 <ResponsiveContainer width="100%" height="100%">
-                   <LineChart data={chartData}>
-                     <defs>
-                       <linearGradient id="colorRating" x1="0" y1="0" x2="0" y2="1">
-                         <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
-                         <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
-                       </linearGradient>
-                     </defs>
-                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                     <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                     <YAxis domain={[0, 5]} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} width={30} dx={-10} />
-                     <Tooltip 
-                       contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                       itemStyle={{ color: '#0f172a', fontWeight: 'bold' }}
-                     />
-                     <Line type="monotone" dataKey="rating" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', stroke: '#8B5CF6', strokeWidth: 2 }} activeDot={{ r: 6, strokeWidth: 0, fill: '#6366F1' }} />
-                   </LineChart>
-                 </ResponsiveContainer>
-               ) : (
-                 <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm font-medium">Not enough data to plot trend</div>
-               )}
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorRating" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis domain={[0, 5]} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} width={30} dx={-10} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      itemStyle={{ color: '#0f172a', fontWeight: 'bold' }}
+                    />
+                    <Line type="monotone" dataKey="rating" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', stroke: '#8B5CF6', strokeWidth: 2 }} activeDot={{ r: 6, strokeWidth: 0, fill: '#6366F1' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm font-medium">Not enough data to plot trend</div>
+              )}
             </div>
           </div>
 
@@ -420,15 +424,15 @@ export default function AdminDashboard() {
                 <span className="text-yellow-400 text-2xl">★</span>
               </div>
             </div>
-            
+
             <div className="glass-panel rounded-3xl p-6 flex-1 flex flex-col justify-center transition-transform hover:-translate-y-1 border-purple-200/50 shadow-purple-500/5 hover:shadow-purple-500/20 relative overflow-hidden group">
               <div className="absolute -inset-x-0 -bottom-0 h-1/2 bg-gradient-to-t from-purple-100/50 to-transparent pointer-events-none" />
               <p className="text-purple-600 text-xs font-bold mb-3 uppercase tracking-wider relative">Top Concerns</p>
               <div className="space-y-2 relative">
                 {tagStats.length > 0 ? tagStats.map(([tag, count]) => (
                   <div key={tag} className="flex justify-between items-center text-sm">
-                     <span className="text-slate-700 font-medium">{tag}</span>
-                     <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md font-bold text-xs">{count}</span>
+                    <span className="text-slate-700 font-medium">{tag}</span>
+                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md font-bold text-xs">{count}</span>
                   </div>
                 )) : (
                   <span className="text-slate-400 text-sm">No tags logged</span>
@@ -507,7 +511,7 @@ export default function AdminDashboard() {
                   })
                   return (
                     <div key={i} className={`flex items-start gap-3 p-4 rounded-xl border ${isResolved ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-200'} transition-all hover:shadow-sm`}>
-                      <button 
+                      <button
                         onClick={() => toggleAbstractTodo(linkedIds, isResolved)}
                         className={`mt-0.5 flex-shrink-0 cursor-pointer transition-colors ${isResolved ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
                       >
@@ -547,8 +551,8 @@ export default function AdminDashboard() {
               key={f}
               onClick={() => setFilter(f)}
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${filter === f
-                  ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-                  : 'bg-white/80 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-white shadow-sm hover:shadow'
+                ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
+                : 'bg-white/80 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-white shadow-sm hover:shadow'
                 }`}
             >
               {f}
@@ -559,68 +563,68 @@ export default function AdminDashboard() {
         {/* Meal Session Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
           {loading ? (
-             <div className="md:col-span-2 text-center p-12 text-slate-400 font-medium">Loading Insights...</div>
+            <div className="md:col-span-2 text-center p-12 text-slate-400 font-medium">Loading Insights...</div>
           ) : groupedMeals.length === 0 ? (
-             <div className="md:col-span-2 text-center p-12 text-slate-400 font-medium">No meal sessions match the selected timeframe.</div>
+            <div className="md:col-span-2 text-center p-12 text-slate-400 font-medium">No meal sessions match the selected timeframe.</div>
           ) : (
-             groupedMeals.map(meal => (
-               <motion.div 
-                 initial={{ opacity: 0, y: 20 }}
-                 whileInView={{ opacity: 1, y: 0 }}
-                 viewport={{ once: true, margin: "-50px" }}
-                 transition={{ duration: 0.5, ease: "easeOut" }}
-                 key={meal.id} 
-                 className="glass-panel transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:shadow-purple-500/10 rounded-3xl p-8 flex flex-col"
-               >
-                  <div className="flex justify-between items-start mb-6">
-                     <div>
-                       <h3 className="text-2xl font-black text-slate-900 tracking-tight">{meal.mealSlot}</h3>
-                       <p className="text-sm text-slate-500 font-medium">{meal.dateStr}</p>
-                     </div>
-                     <div className="text-right">
-                       <div className="flex items-baseline gap-1 justify-end">
-                         <span className="text-3xl font-extrabold text-slate-900 tracking-tighter">{meal.avg}</span>
-                         <span className="text-yellow-400 text-xl">★</span>
-                       </div>
-                       <p className="text-xs text-slate-500 font-medium mt-1">{meal.feedbacks.length} submissions</p>
-                     </div>
+            groupedMeals.map(meal => (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                key={meal.id}
+                className="glass-panel transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:shadow-purple-500/10 rounded-3xl p-8 flex flex-col"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">{meal.mealSlot}</h3>
+                    <p className="text-sm text-slate-500 font-medium">{meal.dateStr}</p>
                   </div>
+                  <div className="text-right">
+                    <div className="flex items-baseline gap-1 justify-end">
+                      <span className="text-3xl font-extrabold text-slate-900 tracking-tighter">{meal.avg}</span>
+                      <span className="text-yellow-400 text-xl">★</span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-1">{meal.feedbacks.length} submissions</p>
+                  </div>
+                </div>
 
-                  {meal.unresolved > 0 && (
-                    <div className="mb-6 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl inline-flex items-center gap-2 self-start shadow-sm">
-                      <AlertTriangle className="w-4 h-4" />
-                      {meal.unresolved} Unresolved Critical {meal.unresolved === 1 ? 'Issue' : 'Issues'}
+                {meal.unresolved > 0 && (
+                  <div className="mb-6 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl inline-flex items-center gap-2 self-start shadow-sm">
+                    <AlertTriangle className="w-4 h-4" />
+                    {meal.unresolved} Unresolved Critical {meal.unresolved === 1 ? 'Issue' : 'Issues'}
+                  </div>
+                )}
+
+                <div className="mb-8 flex-1">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Major Concerns</p>
+                  <div className="flex flex-wrap gap-2">
+                    {meal.topTags.length > 0 ? meal.topTags.map(([tag, count]) => (
+                      <span key={tag} className="text-xs px-3 py-1.5 rounded-md bg-slate-100 text-slate-700 font-medium border border-slate-200">
+                        {tag} <span className="text-slate-400 ml-1">({count})</span>
+                      </span>
+                    )) : <span className="text-xs text-slate-400 italic">No specific complaints matched</span>}
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-6 border-t border-slate-200/60">
+                  {aiSummaries[meal.id] ? (
+                    <div className="bg-purple-50/80 border border-purple-100 rounded-2xl p-5 shadow-sm">
+                      <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                        <Sparkles className="w-4 h-4 inline-block mr-2 mb-0.5 text-purple-500" />
+                        {typeof aiSummaries[meal.id] === 'string' ? aiSummaries[meal.id] : aiSummaries[meal.id].summary}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2 py-4 text-purple-500/70 font-medium text-sm animate-pulse">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating venue summary...
                     </div>
                   )}
-
-                  <div className="mb-8 flex-1">
-                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Major Concerns</p>
-                     <div className="flex flex-wrap gap-2">
-                       {meal.topTags.length > 0 ? meal.topTags.map(([tag, count]) => (
-                         <span key={tag} className="text-xs px-3 py-1.5 rounded-md bg-slate-100 text-slate-700 font-medium border border-slate-200">
-                           {tag} <span className="text-slate-400 ml-1">({count})</span>
-                         </span>
-                       )) : <span className="text-xs text-slate-400 italic">No specific complaints matched</span>}
-                     </div>
-                  </div>
-
-                  <div className="mt-auto pt-6 border-t border-slate-200/60">
-                    {aiSummaries[meal.id] ? (
-                      <div className="bg-purple-50/80 border border-purple-100 rounded-2xl p-5 shadow-sm">
-                        <p className="text-sm text-slate-800 leading-relaxed font-medium">
-                          <Sparkles className="w-4 h-4 inline-block mr-2 mb-0.5 text-purple-500" />
-                          {typeof aiSummaries[meal.id] === 'string' ? aiSummaries[meal.id] : aiSummaries[meal.id].summary}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2 py-4 text-purple-500/70 font-medium text-sm animate-pulse">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Generating venue summary...
-                      </div>
-                    )}
-                  </div>
-               </motion.div>
-             ))
+                </div>
+              </motion.div>
+            ))
           )}
         </div>
       </div>

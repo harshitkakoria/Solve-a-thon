@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -8,12 +9,13 @@ import { fetchActiveMenu } from '../lib/menu'
 const TAGS = ['Taste', 'Hygiene', 'Quantity', 'Quality']
 
 function getMealSlot() {
-  const hour = new Date().getHours()
-  if (hour >= 7 && hour < 11) return 'Breakfast'
-  if (hour >= 12 && hour < 16) return 'Lunch'
-  if (hour >= 17 && hour < 19) return 'Snacks'
-  // Testing: Dinner covers all night (7 PM to 6:59 AM)
-  if (hour >= 19 || hour < 7) return 'Dinner'
+  const now = new Date()
+  const t = now.getHours() + now.getMinutes() / 60
+
+  if (t >= 7 && t <= 9.5) return 'Breakfast' // 7:00 AM - 9:30 AM
+  if (t >= 12 && t <= 14.5) return 'Lunch'   // 12:00 PM - 2:30 PM
+  if (t >= 17 && t <= 18.5) return 'Snacks'  // 5:00 PM - 6:30 PM
+  if (t >= 19 && t <= 21) return 'Dinner'    // 7:00 PM - 9:00 PM
   return 'Closed'
 }
 
@@ -104,7 +106,7 @@ export default function FeedbackForm() {
     return (
       <div className="min-h-screen relative overflow-hidden bg-slate-50 flex items-center justify-center p-4">
         <div className="absolute top-[-20%] left-[-10%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-purple-50/40 to-slate-50 animate-slow-pulse pointer-events-none" />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="glass-panel p-8 max-w-md text-center rounded-3xl relative z-10"
@@ -121,14 +123,14 @@ export default function FeedbackForm() {
     <div className="min-h-screen relative overflow-hidden bg-slate-50 flex items-center justify-center p-4">
       <div className="absolute top-[-20%] left-[-10%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-purple-50/40 to-slate-50 animate-slow-pulse pointer-events-none" />
       <div className="w-full max-w-lg relative z-10">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="glass-panel p-8 rounded-3xl"
         >
           <div className="absolute -inset-x-0 -top-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent opacity-50 pointer-events-none rounded-t-3xl" />
-          
+
           <h1 className="text-3xl font-bold text-slate-900 mb-6 tracking-tight relative">
             Submit Feedback
           </h1>
@@ -200,11 +202,10 @@ export default function FeedbackForm() {
                     key={star}
                     type="button"
                     onClick={() => setRating(star)}
-                    className={`text-3xl transition-colors cursor-pointer ${
-                      star <= rating
+                    className={`text-3xl transition-colors cursor-pointer ${star <= rating
                         ? 'text-yellow-400'
                         : 'text-slate-300 hover:text-slate-400'
-                    }`}
+                      }`}
                   >
                     ★
                   </button>
@@ -225,11 +226,10 @@ export default function FeedbackForm() {
                     key={tag}
                     type="button"
                     onClick={() => toggleTag(tag)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-all cursor-pointer shadow-sm ${
-                      selectedTags.includes(tag)
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-all cursor-pointer shadow-sm ${selectedTags.includes(tag)
                         ? 'bg-purple-600 border-purple-500 text-white shadow-purple-500/20'
                         : 'bg-white/80 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     {tag}
                   </motion.button>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import { Link, useSearchParams } from 'react-router-dom'
 import * as XLSX from 'xlsx'
@@ -163,14 +164,18 @@ export default function UploadMenu() {
       const isEditing = editing[weekNum]
 
       return (
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 relative flex flex-col h-full">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-panel rounded-3xl p-8 relative flex flex-col h-full"
+          >
               <div className="flex justify-between items-start mb-6">
                  <div>
                     <div className="flex items-center gap-3 mb-1">
-                       <h3 className="text-xl font-bold text-white tracking-tight">{title}</h3>
+                       <h3 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h3>
                        {badge}
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 font-medium">
                        {isEmpty ? "Needs to be configured" : "Ready for deployment"}
                     </p>
                  </div>
@@ -179,7 +184,7 @@ export default function UploadMenu() {
                        <button 
                           disabled={!messId || loading}
                           onClick={() => document.getElementById(`excel-upload-${weekNum}`).click()}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 font-medium transition cursor-pointer disabled:opacity-50"
+                          className="text-xs px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-600 font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
                        >
                           Upload Excel
                        </button>
@@ -193,7 +198,7 @@ export default function UploadMenu() {
                        <button 
                           disabled={!messId || loading}
                           onClick={() => handleEditClick(weekNum)}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition cursor-pointer disabled:opacity-50"
+                          className="text-xs px-4 py-2 rounded-xl bg-white/80 hover:bg-white border border-slate-200 text-slate-700 font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
                        >
                           Edit Menu
                        </button>
@@ -203,39 +208,39 @@ export default function UploadMenu() {
 
               {isEditing ? (
                   <div className="space-y-4 flex flex-col flex-1">
-                      <div className="text-xs text-slate-400 mb-2">
-                        <span className="text-yellow-500">⚠</span> Use standard JSON. Setting it to <code className="bg-black/30 px-1 rounded">{`{}`}</code> clears the menu.
+                      <div className="text-xs text-slate-500 mb-2 font-medium">
+                        <span className="text-yellow-500">⚠</span> Use standard JSON. Setting it to <code className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-700">{`{}`}</code> clears the menu.
                       </div>
                       <textarea
                           rows={12}
-                          className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white font-mono text-xs focus:ring-2 focus:ring-purple-500/50 outline-none resize-y"
+                          className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-slate-200 text-slate-800 font-mono text-xs focus:ring-2 focus:ring-purple-500/50 outline-none resize-y shadow-inner"
                           value={editJson[weekNum]}
                           onChange={(e) => setEditJson(prev => ({...prev, [weekNum]: e.target.value}))}
                       />
-                      <div className="flex gap-2 mt-auto pt-4">
+                      <div className="flex gap-3 mt-auto pt-4">
                           <button
                               disabled={loading}
                               onClick={() => handleSave(weekNum)}
-                              className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-medium transition cursor-pointer disabled:opacity-50"
+                              className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold shadow-md shadow-purple-500/20 transition cursor-pointer disabled:opacity-50"
                           >
                               Save Changes
                           </button>
                           <button
                               disabled={loading}
                               onClick={() => setEditing(prev => ({...prev, [weekNum]: false}))}
-                              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white border border-white/5 rounded-xl text-sm transition cursor-pointer disabled:opacity-50"
+                              className="px-6 py-2.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-xl text-sm font-bold shadow-sm transition cursor-pointer disabled:opacity-50"
                           >
                               Cancel
                           </button>
                       </div>
                   </div>
               ) : (
-                  <div className="mt-auto pt-4 border-t border-white/10 flex flex-col flex-1">
+                  <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col flex-1">
                        {isEmpty ? (
-                           <p className="text-sm text-slate-600 italic py-2 mt-auto text-right">Waiting for data...</p>
+                           <p className="text-sm text-slate-400 font-medium italic py-2 mt-auto text-center bg-slate-50 border border-slate-100 rounded-xl">Waiting for data...</p>
                        ) : (
                            <>
-                               <div className="flex-1 overflow-y-auto min-h-[150px] max-h-72 mb-4 bg-black/20 rounded-xl p-4 border border-white/5 space-y-5 custom-scrollbar">
+                               <div className="flex-1 overflow-y-auto min-h-[150px] max-h-72 mb-6 bg-slate-50 border border-slate-200/60 rounded-2xl p-5 space-y-6 custom-scrollbar shadow-inner">
                                    {Object.entries(menu.menu_data)
                                      .sort((a, b) => {
                                        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -243,7 +248,7 @@ export default function UploadMenu() {
                                      })
                                      .map(([day, meals]) => (
                                      <div key={day}>
-                                       <h4 className="text-sm font-bold text-white mb-2 pb-1 border-b border-white/10">{day}</h4>
+                                       <h4 className="text-sm font-extrabold text-slate-800 mb-3 pb-1.5 border-b border-slate-200 uppercase tracking-wider">{day}</h4>
                                        {Object.entries(meals || {})
                                          .sort((a, b) => {
                                            const mealOrder = ['Breakfast', 'Lunch', 'Snacks', 'Dinner']
@@ -252,9 +257,9 @@ export default function UploadMenu() {
                                            return valA - valB
                                          })
                                          .map(([mealName, dishes]) => (
-                                         <div key={mealName} className="mb-1.5 leading-snug">
-                                            <span className="text-xs font-semibold text-purple-300 mr-2">{mealName}:</span>
-                                            <span className="text-xs text-slate-300">
+                                         <div key={mealName} className="mb-2 leading-relaxed flex items-start gap-2">
+                                            <span className="text-xs font-bold text-purple-600 uppercase tracking-wide pt-0.5 w-20 flex-shrink-0">{mealName}</span>
+                                            <span className="text-sm text-slate-600 font-medium">
                                               {Array.isArray(dishes) ? dishes.join(', ') : dishes}
                                             </span>
                                          </div>
@@ -267,14 +272,14 @@ export default function UploadMenu() {
                                        <button 
                                           disabled={loading}
                                           onClick={() => handleSetActive(weekNum)}
-                                          className="flex-1 py-2.5 px-6 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium transition cursor-pointer disabled:opacity-50 shadow-lg shadow-purple-900/20"
+                                          className="flex-1 py-3 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold transition shadow-lg shadow-purple-500/20 cursor-pointer disabled:opacity-50"
                                        >
                                           Set as Active Weekly Menu
                                        </button>
                                    ) : (
                                        <button 
                                           disabled
-                                          className="flex-1 py-2.5 px-6 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-medium opacity-70 cursor-not-allowed"
+                                          className="flex-1 py-3 px-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 text-sm font-bold opacity-80 cursor-not-allowed shadow-sm"
                                        >
                                           Currently Running
                                        </button>
@@ -284,33 +289,39 @@ export default function UploadMenu() {
                        )}
                   </div>
               )}
-          </div>
+          </motion.div>
       )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex justify-center p-4 md:p-8">
-      <div className="w-full max-w-5xl">
+    <div className="min-h-screen relative overflow-hidden bg-slate-50 flex justify-center p-4 md:p-10">
+      <div className="absolute top-[-20%] left-[-10%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-purple-50/40 to-slate-50 animate-slow-pulse pointer-events-none" />
+      <div className="w-full max-w-5xl relative z-10">
+        
         {/* HEADER */}
-        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-6 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-panel rounded-3xl p-8 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+        >
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Menu Manager</h1>
-            <p className="text-sm text-slate-400 mt-1">Configure your bi-weekly rotating meal plans.</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">Menu Manager</h1>
+            <p className="text-sm text-slate-500 font-medium mt-1">Configure your bi-weekly rotating meal plans.</p>
           </div>
           <div className="flex items-center gap-4">
-             <Link to={`/admin?mess=${messId}`} className="text-sm text-slate-400 hover:text-white transition whitespace-nowrap">← Dashboard</Link>
-             <div className="flex bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 items-center gap-3">
-                <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold whitespace-nowrap">Mess ID</span>
+             <Link to={`/admin?mess=${messId}`} className="text-sm text-slate-500 hover:text-slate-900 font-medium transition whitespace-nowrap">← Dashboard</Link>
+             <div className="flex bg-white/80 border border-slate-200 rounded-full px-5 py-2 items-center gap-3 shadow-sm">
+                <span className="text-xs text-slate-400 uppercase tracking-wider font-bold whitespace-nowrap">Mess ID</span>
                 <input 
                   value={messId}
                   onChange={(e) => setMessId(e.target.value)}
                   readOnly={!!queryMess}
                   placeholder="MESS-01"
-                  className="bg-transparent border-none text-white focus:outline-none w-24 text-sm font-semibold"
+                  className="bg-transparent border-none text-slate-900 focus:outline-none w-24 text-sm font-bold"
                 />
              </div>
           </div>
-        </div>
+        </motion.div>
 
         {statusMsg && (
             <div className={`mb-6 p-4 rounded-xl border text-sm ${

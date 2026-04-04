@@ -194,4 +194,99 @@ Rules:
     throw error
   }
 }
+/**
+ * Summarizes a meal session's feedback AND extracts suggestions + actionable issues in one call.
+ * @param {Array<{id: string, tags: string[], text: string}>} feedbackData 
+ * @returns {Promise<{summary: string, suggestions: string[], todos: Array<{issue: string, severity: number, linked_records: string[]}>}>}
+ */
+export async function summarizeMealSession(feedbackData) {
+  const defaultResult = { summary: '', suggestions: [], todos: [] }
 
+  const messages = [
+    {
+      role: 'system',
+      content: `You are an executive analyzer for a dining facility. I will provide student feedback for a single meal session.
+Each submission contains an "id", "tags", and "text".
+
+Your job is to return a single JSON object with exactly these keys:
+1. "summary": A concise 2-3 sentence paragraph summarizing the overall sentiment.
+2. "suggestions": An array of actionable student suggestions/recommendations. If none, return [].
+3. "todos": An array of actionable issues that require resolution. Combine similar complaints into ONE todo.
+   Each todo object must contain:
+     - "issue": A concise descriptor (e.g. "Frequent complaints of salty Poha").
+     - "severity": An integer (1 for minor, 2 for moderate, 3 for health/hygiene risks).
+     - "linked_records": An array of "id" strings from the feedback data that contributed to this issue.
+
+CRITICAL RULES:
+1. ONLY use the provided data. DO NOT hallucinate.
+2. Return a raw JSON object. Do not wrap it in Markdown code blocks.
+3. The output must exactly match: {"summary": "...", "suggestions": [], "todos": []}`
+    },
+    {
+      role: 'user',
+      content: JSON.stringify(feedbackData)
+    }
+  ]
+
+  const azureEndpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT
+  const azureDeployment = import.meta.env.VITE_AZURE_DEPLOYMENT_NAME
+  const azureApiKey = import.meta.env.VITE_AZURE_OPENAI_KEY
+
+  if (azureEndpoint && azureDeployment && azureApiKey) {
+    try {
+      const baseEndpoint = azureEndpoint.endsWith('/') ? azureEndpoint.slice(0, -1) : azureEndpoint
+      const azureUrl = `${baseEndpoint}/openai/deployments/${azureDeployment}/chat/completions?api-version=2025-04-01-preview`
+      const azureResponse = await fetch(azureUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': azureApiKey
+        },
+        body: JSON.stringify({ messages })
+      })
+
+      if (azureResponse.ok) {
+        const data = await azureResponse.json()
+        const content = data.choices[0].message.content
+        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim()
+        return JSON.parse(cleanContent)
+      } else {
+        console.warn(`Azure OpenAI failed: ${azureResponse.status}`)
+      }
+    } catch (azureError) {
+      console.warn('Azure OpenAI error:', azureError.message)
+    }
+  }
+
+  const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY
+  if (!openaiApiKey) {
+    return { ...defaultResult, summary: 'Summary generation failed: OpenAI key missing.' }
+  }
+
+  try {
+    const openaiUrl = 'https://api.openai.com/v1/chat/completions'
+    const openaiResponse = await fetch(openaiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages,
+        temperature: 0.2
+      })
+    })
+
+    if (!openaiResponse.ok) {
+      throw new Error(`OpenAI API error: ${openaiResponse.status}`)
+    }
+    const data = await openaiResponse.json()
+    const content = data.choices[0].message.content
+    const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim()
+    return JSON.parse(cleanContent)
+  } catch (error) {
+    console.error('summarizeMealSession failed:', error)
+    return { ...defaultResult, summary: 'Summary generation failed.' }
+  }
+}

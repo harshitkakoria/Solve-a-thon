@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+@theme {
+  --animate-slow-pulse: slow-pulse 8s ease-in-out infinite alternate;
+  
+  @keyframes slow-pulse {
+    0% { transform: scale(1) translate(0, 0); opacity: 0.8; }
+    50% { transform: scale(1.05) translate(-2%, 2%); opacity: 1; }
+    100% { transform: scale(1) translate(2%, -2%); opacity: 0.8; }
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;    /* Firefox */
+  }
+
+  /* Glass panel core utility */
+  .glass-panel {
+    @apply backdrop-blur-2xl bg-white/60 border border-white/50 shadow-xl shadow-slate-200/50;
+  }
+}
+
+/* Ambient Base Settings */
+body {
+  @apply bg-slate-50 text-slate-800 antialiased selection:bg-purple-200 selection:text-purple-900;
+  margin: 0;
+  overflow-x: hidden;
+}
